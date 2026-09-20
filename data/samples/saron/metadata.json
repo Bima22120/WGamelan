@@ -1,0 +1,45 @@
+{
+  "instrument": "Saron Barung",
+  "category": "Balungan Metallophone",
+  "tuning_systems": ["slendro", "pelog"],
+  "damping_enabled": true,
+  "default_decay_seconds": 1.2,
+  "samples": [
+    {
+      "note": "1",
+      "tuning": "slendro",
+      "frequency_hz": 270.0,
+      "filename": "slendro_1_ji.wav"
+    },
+    {
+      "note": "2",
+      "tuning": "slendro",
+      "frequency_hz": 310.0,
+      "filename": "slendro_2_ro.wav"
+    },
+    {
+      "note": "3",
+      "tuning": "slendro",
+      "frequency_hz": 355.0,
+      "filename": "slendro_3_lu.wav"
+    },
+    {
+      "note": "5",
+      "tuning": "slendro",
+      "frequency_hz": 410.0,
+      "filename": "slendro_5_ma.wav"
+    },
+    {
+      "note": "6",
+      "tuning": "slendro",
+      "frequency_hz": 470.0,
+      "filename": "slendro_6_nem.wav"
+    },
+    {
+      "note": "1_high",
+      "tuning": "slendro",
+      "frequency_hz": 540.0,
+      "filename": "slendro_1_high.wav"
+    }
+  ]
+}

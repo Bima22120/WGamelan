@@ -1,0 +1,71 @@
+{
+  "scale_name": "Pelog",
+  "culture": "Javanese Gamelan",
+  "description": "Heptatonic tuning system characterized by unequal intervals between steps.",
+  "degrees": [
+    {
+      "number": "1",
+      "solfege": "Ji",
+      "name": "Panunggal",
+      "cents": 0,
+      "base_freq_hz": 261.63,
+      "midi_note_approx": 60
+    },
+    {
+      "number": "2",
+      "solfege": "Ro",
+      "name": "Gulu",
+      "cents": 140,
+      "base_freq_hz": 283.47,
+      "midi_note_approx": 61
+    },
+    {
+      "number": "3",
+      "solfege": "Lu",
+      "name": "Dhadha",
+      "cents": 420,
+      "base_freq_hz": 332.96,
+      "midi_note_approx": 64
+    },
+    {
+      "number": "4",
+      "solfege": "Pat",
+      "name": "Pelog",
+      "cents": 550,
+      "base_freq_hz": 358.91,
+      "midi_note_approx": 65
+    },
+    {
+      "number": "5",
+      "solfege": "Ma",
+      "name": "Lima",
+      "cents": 680,
+      "base_freq_hz": 386.87,
+      "midi_note_approx": 67
+    },
+    {
+      "number": "6",
+      "solfege": "Nem",
+      "name": "Nem",
+      "cents": 830,
+      "base_freq_hz": 421.75,
+      "midi_note_approx": 68
+    },
+    {
+      "number": "7",
+      "solfege": "Pi",
+      "name": "Barang",
+      "cents": 1100,
+      "base_freq_hz": 493.88,
+      "midi_note_approx": 71
+    },
+    {
+      "number": "1_high",
+      "solfege": "Ji'",
+      "name": "Panunggal Inggil",
+      "cents": 1200,
+      "base_freq_hz": 523.25,
+      "midi_note_approx": 72
+    }
+  ]
+}

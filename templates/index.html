@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drum to Gamelan Converter</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 50px; background: #121212; color: white; }
+        .box { background: #1e1e1e; padding: 30px; border-radius: 10px; display: inline-block; }
+        button { background: #ff9800; border: none; padding: 10px 20px; color: white; cursor: pointer; border-radius: 5px; margin-top: 15px; }
+        #loading { display: none; color: #ff9800; margin-top: 15px; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h2>Ubah Drum Menjadi Gamelan</h2>
+        <p>Unggah lagu MP3/WAV Anda di bawah ini:</p>
+        
+        <form id="uploadForm" enctype="multipart/form-data">
+            <input type="file" name="file" id="file" accept=".mp3, .wav" required>
+            <br>
+            <button type="submit">Proses Lagu</button>
+        </form>
+
+        <div id="loading">Memproses AI... Ini bisa memakan waktu beberapa menit.</div>
+        
+        <div id="result" style="display: none; margin-top: 20px;">
+            <h3>Hasil Gamelan:</h3>
+            <audio id="audioPlayer" controls></audio>
+            <br>
+            <a id="downloadBtn" href="#" download>
+                <button style="background: #4caf50;">Download Hasil</button>
+            </a>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('uploadForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('result').style.display = 'none';
+            
+            const response = await fetch('/convert', {
+                method: 'POST',
+                body: formData
+            });
+            
+            document.getElementById('loading').style.display = 'none';
+            
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                document.getElementById('audioPlayer').src = url;
+                document.getElementById('downloadBtn').href = url;
+                document.getElementById('result').style.display = 'block';
+            } else {
+                alert("Terjadi kesalahan saat memproses lagu.");
+            }
+        };
+    </script>
+</body>
+</html>

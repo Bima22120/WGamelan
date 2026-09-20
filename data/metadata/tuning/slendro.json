@@ -1,0 +1,55 @@
+{
+  "scale_name": "Slendro",
+  "culture": "Javanese Gamelan",
+  "description": "Pentatonic equidistant tuning system with approximately 240 cents between adjacent scale degrees.",
+  "degrees": [
+    {
+      "number": "1",
+      "solfege": "Ji",
+      "name": "Barang / Panunggal",
+      "cents": 0,
+      "base_freq_hz": 270.0,
+      "midi_note_approx": 61
+    },
+    {
+      "number": "2",
+      "solfege": "Ro",
+      "name": "Gulu",
+      "cents": 240,
+      "base_freq_hz": 310.0,
+      "midi_note_approx": 63
+    },
+    {
+      "number": "3",
+      "solfege": "Lu",
+      "name": "Dhadha",
+      "cents": 480,
+      "base_freq_hz": 355.0,
+      "midi_note_approx": 65
+    },
+    {
+      "number": "5",
+      "solfege": "Ma",
+      "name": "Lima",
+      "cents": 720,
+      "base_freq_hz": 410.0,
+      "midi_note_approx": 68
+    },
+    {
+      "number": "6",
+      "solfege": "Nem",
+      "name": "Nem",
+      "cents": 960,
+      "base_freq_hz": 470.0,
+      "midi_note_approx": 70
+    },
+    {
+      "number": "1_high",
+      "solfege": "Ji'",
+      "name": "Barang Inggil",
+      "cents": 1200,
+      "base_freq_hz": 540.0,
+      "midi_note_approx": 73
+    }
+  ]
+}
