@@ -68,6 +68,7 @@ class MainWindow:
             legato=self.controls.legato,
             reverb=self.controls.reverb,
             add_gong=self.controls.add_gong,
+            add_bonang=self.controls.add_bonang,
             stereo=self.controls.stereo,
         )
 

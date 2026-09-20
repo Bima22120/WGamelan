@@ -20,6 +20,7 @@ from app.gamelan.mapping import PitchMapper
 from app.gamelan.performance import PerformanceStyle
 from app.gamelan.renderer import GamelanRenderer
 from app.gamelan.gong_layer import GongPunctuationLayer
+from app.gamelan.bonang_layer import BonangEmbellishmentLayer
 
 
 @dataclass
@@ -32,10 +33,13 @@ class PipelineResult:
     summary: AudioSummary
     transposition_applied: float = 0.0
     gong_notes: List[Note] = None
+    bonang_notes: List[Note] = None
 
     def __post_init__(self):
         if self.gong_notes is None:
             self.gong_notes = []
+        if self.bonang_notes is None:
+            self.bonang_notes = []
 
 
 class GamelanizerPipeline:
@@ -54,6 +58,7 @@ class GamelanizerPipeline:
         legato: bool = True,
         reverb: bool = True,
         add_gong: bool = True,
+        add_bonang: bool = True,
         stereo: bool = True,
     ):
         self.sr = sample_rate
@@ -66,6 +71,7 @@ class GamelanizerPipeline:
         self.legato = legato
         self.reverb = reverb
         self.add_gong = add_gong
+        self.add_bonang = add_bonang
         self.stereo = stereo
 
         # Subsystems
@@ -88,6 +94,7 @@ class GamelanizerPipeline:
             stereo=self.stereo,
         )
         self.gong_layer = GongPunctuationLayer(scale=self.scale, bpm=self.bpm)
+        self.bonang_layer = BonangEmbellishmentLayer(scale=self.scale, bpm=self.bpm)
 
     def process(
         self,
@@ -169,17 +176,27 @@ class GamelanizerPipeline:
             self.gong_layer.bpm = self.bpm
             gong_notes = self.gong_layer.generate(styled_notes)
 
-        # 7. Build Score (Solusi 4: Lead + Gong Tracks)
+        # 7. Bonang Embellishment Layer (Full Ensemble Karawitan)
+        bonang_notes: List[Note] = []
+        if self.add_bonang and styled_notes and self.instrument.name.lower() != "bonang barung":
+            report("Arranging Bonang chime ensemble layer...", 0.86)
+            self.bonang_layer.bpm = self.bpm
+            bonang_notes = self.bonang_layer.generate(styled_notes)
+
+        # 8. Build Multi-Track Score
         lead_track = Track(name=self.instrument.name, instrument=self.instrument.name, notes=styled_notes)
         tracks = [lead_track]
+        if bonang_notes:
+            bonang_track = Track(name="Bonang Barung", instrument="bonang", notes=bonang_notes)
+            tracks.append(bonang_track)
         if gong_notes:
             gong_track = Track(name="Gong Ageng & Kenong", instrument="gong", notes=gong_notes)
             tracks.append(gong_track)
         score = Score(tracks=tracks, tempo_bpm=self.bpm)
 
-        # 8. Render Audio (Solusi 3 & 4: Legato Ringing + Acoustic Pendopo Reverb)
-        report("Synthesizing Gamelan audio (Legato + Pendopo Reverb)...", 0.90)
-        all_notes = styled_notes + gong_notes
+        # 9. Render Audio (Physical Modeling + Legato + Pendopo Reverb)
+        report("Synthesizing Full Gamelan Ensemble (Physical Modeling + Reverb)...", 0.90)
+        all_notes = styled_notes + bonang_notes + gong_notes
         rendered_audio = self.renderer.render(
             all_notes,
             legato=self.legato,
@@ -194,6 +211,7 @@ class GamelanizerPipeline:
             detected_notes=notes,
             mapped_notes=styled_notes,
             gong_notes=gong_notes,
+            bonang_notes=bonang_notes,
             score=score,
             summary=summary,
             transposition_applied=self.mapper.applied_transposition,

@@ -11,6 +11,7 @@ from app.gamelan.envelope import GamelanEnvelope
 from app.gamelan.renderer import GamelanRenderer
 from app.gamelan.reverb import PendopoReverb
 from app.gamelan.gong_layer import GongPunctuationLayer
+from app.gamelan.bonang_layer import BonangEmbellishmentLayer
 
 __all__ = [
     "GamelanPitch",
@@ -30,4 +31,5 @@ __all__ = [
     "GamelanRenderer",
     "PendopoReverb",
     "GongPunctuationLayer",
+    "BonangEmbellishmentLayer",
 ]

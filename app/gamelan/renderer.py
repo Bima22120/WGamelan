@@ -20,6 +20,7 @@ class GamelanRenderer:
         self.sr = sr
         self.instrument = instrument or get_instrument("saron")
         self.sampler = GamelanSampler(instrument=self.instrument, sr=sr)
+        self.bonang_sampler = GamelanSampler(instrument=get_instrument("bonang"), sr=sr)
         self.gong_sampler = GamelanSampler(instrument=get_instrument("gong"), sr=sr)
         self.legato = legato
         self.reverb_enabled = reverb
@@ -56,7 +57,14 @@ class GamelanRenderer:
 
             inst_meta = note.metadata.get("instrument", "").lower()
             is_gong = ("gong" in inst_meta or "kenong" in inst_meta or freq < 90.0)
-            active_sampler = self.gong_sampler if is_gong else self.sampler
+            is_bonang = ("bonang" in inst_meta)
+
+            if is_bonang:
+                active_sampler = self.bonang_sampler
+            elif is_gong:
+                active_sampler = self.gong_sampler
+            else:
+                active_sampler = self.sampler
 
             # Determine damping behavior
             if is_gong or use_legato:

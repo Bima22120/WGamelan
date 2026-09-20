@@ -22,6 +22,7 @@ class OfflineProcessor:
         legato: bool = True,
         reverb: bool = True,
         add_gong: bool = True,
+        add_bonang: bool = True,
         stereo: bool = True,
     ):
         self.pipeline = GamelanizerPipeline(
@@ -35,6 +36,7 @@ class OfflineProcessor:
             legato=legato,
             reverb=reverb,
             add_gong=add_gong,
+            add_bonang=add_bonang,
             stereo=stereo,
         )
         self.engine_renderer = EngineRenderer(sample_rate=sample_rate)

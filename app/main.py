@@ -53,6 +53,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--no-reverb", dest="reverb", action="store_false", help="Disable Pendopo reverb")
     parser.add_argument("--gong", action="store_true", default=True, help="Generate automatic Gong Ageng & Kenong punctuation layer")
     parser.add_argument("--no-gong", dest="gong", action="store_false", help="Disable Gong accompaniment layer")
+    parser.add_argument("--bonang", action="store_true", default=True, help="Generate automatic Bonang Barung chime embellishment layer")
+    parser.add_argument("--no-bonang", dest="bonang", action="store_false", help="Disable Bonang embellishment layer")
     parser.add_argument("--stereo", action="store_true", default=True, help="Render in immersive stereo width")
     parser.add_argument("--mono", dest="stereo", action="store_false", help="Render in mono")
     parser.add_argument("--interactive", action="store_true", help="Launch interactive terminal wizard")
@@ -73,6 +75,7 @@ def main() -> None:
             legato=args.legato,
             reverb=args.reverb,
             add_gong=args.gong,
+            add_bonang=args.bonang,
             stereo=args.stereo,
         )
         window = MainWindow(controls=ctrls)
@@ -96,14 +99,14 @@ def main() -> None:
     print("=" * 65)
     print(f"Input file  : {input_path}")
     print(f"Tuning scale: {args.scale.upper()}")
-    print(f"Instrument  : {args.instrument.upper()}")
+    print(f"Lead Inst   : {args.instrument.upper()}")
     print(f"Quantization: {'ON' if args.quantize else 'OFF'}")
     key_mode = f"AUTO ({'Enabled' if args.auto_key else 'Disabled'})"
     if args.transpose != 0.0:
         key_mode += f" [Manual Shift: {args.transpose:+.1f} st]"
     print(f"Key Mode    : {key_mode}")
-    print(f"Acoustics   : {'Legato Ringing' if args.legato else 'Damped'} | {'Pendopo Reverb (ON)' if args.reverb else 'Reverb (OFF)'} | {'Stereo' if args.stereo else 'Mono'}")
-    print(f"Gong Layer  : {'Gong Ageng & Kenong (ON)' if args.gong else 'OFF'}")
+    print(f"Acoustics   : {'Physical Modeling + Legato' if args.legato else 'Physical Modeling (Damped)'} | {'Pendopo Reverb (ON)' if args.reverb else 'Reverb (OFF)'} | {'Stereo' if args.stereo else 'Mono'}")
+    print(f"Ensemble    : Bonang Layer: {'ON' if args.bonang else 'OFF'} | Gong Ageng: {'ON' if args.gong else 'OFF'}")
     print(f"Output WAV  : {output_wav}")
     if args.midi:
         print(f"Output MIDI : {args.midi}")
@@ -120,6 +123,7 @@ def main() -> None:
         legato=args.legato,
         reverb=args.reverb,
         add_gong=args.gong,
+        add_bonang=args.bonang,
         stereo=args.stereo,
     )
 
@@ -134,12 +138,14 @@ def main() -> None:
         print("\n" + "=" * 65)
         print("CONVERSION SUCCESSFUL!")
         print("=" * 65)
-        print(f"Total Notes Transcribed : {len(result.detected_notes)}")
+        print(f"Total Lead Notes Transcribed : {len(result.detected_notes)}")
         if result.transposition_applied != 0.0:
-            print(f"Harmonic Transposition  : {result.transposition_applied:+.1f} semitones")
+            print(f"Harmonic Transposition       : {result.transposition_applied:+.1f} semitones")
+        if result.bonang_notes:
+            print(f"Bonang Chime Ensemble Layer  : {len(result.bonang_notes)} interlocking notes")
         if result.gong_notes:
-            print(f"Gong Punctuation Layer  : {len(result.gong_notes)} structural strokes (Gong Ageng & Kenong)")
-        print(f"Rendered Audio File     : {os.path.abspath(output_wav)}")
+            print(f"Gong Punctuation Layer       : {len(result.gong_notes)} structural strokes (Gong & Kenong)")
+        print(f"Rendered Audio File          : {os.path.abspath(output_wav)}")
 
         AsciiVisualizer.print_note_table(result.mapped_notes, max_notes=12)
         AsciiVisualizer.print_piano_roll(result.mapped_notes)

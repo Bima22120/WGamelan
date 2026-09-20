@@ -43,4 +43,34 @@ class SampleManager:
                         self.cache[cache_key] = audio
                         return audio
 
+    def get_sample_by_freq(
+        self,
+        freq_hz: float,
+        tuning: str = "slendro",
+        max_deviation_cents: float = 60.0,
+    ) -> Optional[np.ndarray]:
+        """Retrieve sample matching a target frequency within deviation threshold."""
+        if freq_hz <= 0 or not self.metadata.get("samples"):
+            return None
+
+        best_sample = None
+        best_diff_cents = float("inf")
+
+        for item in self.metadata.get("samples", []):
+            if tuning and item.get("tuning") != tuning:
+                continue
+            sample_f0 = float(item.get("frequency_hz", 0.0))
+            if sample_f0 <= 0:
+                continue
+
+            diff_cents = abs(1200.0 * np.log2(freq_hz / sample_f0))
+            if diff_cents < best_diff_cents:
+                best_diff_cents = diff_cents
+                best_sample = item
+
+        if best_sample and best_diff_cents <= max_deviation_cents:
+            note_name = str(best_sample.get("note"))
+            item_tuning = best_sample.get("tuning", tuning)
+            return self.get_sample(note_name, tuning=item_tuning)
+
         return None

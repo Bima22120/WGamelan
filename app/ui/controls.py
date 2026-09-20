@@ -20,6 +20,7 @@ class EngineControls:
     legato: bool = True
     reverb: bool = True
     add_gong: bool = True
+    add_bonang: bool = True
     stereo: bool = True
 
     def to_dict(self) -> Dict[str, Any]:
