@@ -44,6 +44,9 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--quantize", action="store_true", default=True, help="Quantize note onsets to rhythmic grid")
     parser.add_argument("--no-quantize", dest="quantize", action="store_false", help="Disable rhythmic quantization")
+    parser.add_argument("--transpose", type=float, default=0.0, help="Manual transposition shift in semitones (e.g. -2, 1)")
+    parser.add_argument("--auto-key", action="store_true", default=True, help="Automatically align song key with Gamelan scale")
+    parser.add_argument("--no-auto-key", dest="auto_key", action="store_false", help="Disable auto-key alignment")
     parser.add_argument("--interactive", action="store_true", help="Launch interactive terminal wizard")
     return parser.parse_args()
 
@@ -57,6 +60,8 @@ def main() -> None:
             pathet=args.pathet or "",
             instrument=args.instrument,
             quantize=args.quantize,
+            auto_key=args.auto_key,
+            transpose=args.transpose,
         )
         window = MainWindow(controls=ctrls)
         window.run_cli_interactive()
@@ -81,6 +86,10 @@ def main() -> None:
     print(f"Tuning scale: {args.scale.upper()}")
     print(f"Instrument  : {args.instrument.upper()}")
     print(f"Quantization: {'ON' if args.quantize else 'OFF'}")
+    key_mode = f"AUTO ({'Enabled' if args.auto_key else 'Disabled'})"
+    if args.transpose != 0.0:
+        key_mode += f" [Manual Shift: {args.transpose:+.1f} st]"
+    print(f"Key Mode    : {key_mode}")
     print(f"Output WAV  : {output_wav}")
     if args.midi:
         print(f"Output MIDI : {args.midi}")
@@ -92,6 +101,8 @@ def main() -> None:
         pathet=args.pathet,
         instrument_name=args.instrument,
         quantize=args.quantize,
+        auto_key=args.auto_key,
+        transpose=args.transpose,
     )
 
     try:
@@ -106,6 +117,8 @@ def main() -> None:
         print("CONVERSION SUCCESSFUL!")
         print("=" * 65)
         print(f"Total Notes Transcribed : {len(result.detected_notes)}")
+        if result.transposition_applied != 0.0:
+            print(f"Harmonic Transposition  : {result.transposition_applied:+.1f} semitones")
         print(f"Rendered Audio File     : {os.path.abspath(output_wav)}")
 
         AsciiVisualizer.print_note_table(result.mapped_notes, max_notes=12)

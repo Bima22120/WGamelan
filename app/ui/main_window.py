@@ -63,6 +63,8 @@ class MainWindow:
             instrument_name=self.controls.instrument,
             sample_rate=self.controls.sample_rate,
             quantize=self.controls.quantize,
+            auto_key=self.controls.auto_key,
+            transpose=self.controls.transpose,
         )
 
         try:

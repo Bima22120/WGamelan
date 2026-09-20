@@ -17,6 +17,8 @@ class OfflineProcessor:
         instrument_name: str = "saron",
         sample_rate: int = 22050,
         quantize: bool = True,
+        auto_key: bool = True,
+        transpose: float = 0.0,
     ):
         self.pipeline = GamelanizerPipeline(
             scale_name=scale_name,
@@ -24,6 +26,8 @@ class OfflineProcessor:
             instrument_name=instrument_name,
             sample_rate=sample_rate,
             quantize=quantize,
+            auto_key=auto_key,
+            transpose=transpose,
         )
         self.engine_renderer = EngineRenderer(sample_rate=sample_rate)
 

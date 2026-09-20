@@ -9,7 +9,7 @@ from app.audio.preprocessing import preprocess_audio
 from app.audio.analyzer import AudioAnalyzer, AudioSummary
 from app.pitch.pyin_detector import PYINDetector
 from app.pitch.onset import OnsetDetector
-from app.pitch.postprocess import smooth_pitch_track, correct_octave_errors, segment_notes
+from app.pitch.postprocess import smooth_pitch_track, suppress_vibrato, correct_octave_errors, segment_notes
 from app.music.note import Note
 from app.music.velocity import VelocityEstimator
 from app.music.quantizer import NoteQuantizer
@@ -29,6 +29,7 @@ class PipelineResult:
     mapped_notes: List[Note]
     score: Score
     summary: AudioSummary
+    transposition_applied: float = 0.0
 
 
 class GamelanizerPipeline:
@@ -42,12 +43,16 @@ class GamelanizerPipeline:
         sample_rate: int = 22050,
         quantize: bool = True,
         bpm: float = 120.0,
+        auto_key: bool = True,
+        transpose: float = 0.0,
     ):
         self.sr = sample_rate
         self.scale = GamelanScale(scale_type=scale_name, pathet=pathet)
         self.instrument = get_instrument(instrument_name)
         self.quantize = quantize
         self.bpm = bpm
+        self.auto_key = auto_key
+        self.transpose = transpose
 
         # Subsystems
         self.analyzer = AudioAnalyzer(sample_rate=self.sr)
@@ -55,7 +60,11 @@ class GamelanizerPipeline:
         self.onset_detector = OnsetDetector(hop_length=512)
         self.velocity_estimator = VelocityEstimator()
         self.quantizer = NoteQuantizer(bpm=self.bpm, subdivision=4)
-        self.mapper = PitchMapper(scale=self.scale)
+        self.mapper = PitchMapper(
+            scale=self.scale,
+            auto_align_key=self.auto_key,
+            transposition_semitones=self.transpose,
+        )
         self.performance = PerformanceStyle(irama_level=1, apply_damping=self.instrument.damping_enabled)
         self.renderer = GamelanRenderer(instrument=self.instrument, sr=self.sr)
 
@@ -85,15 +94,23 @@ class GamelanizerPipeline:
         onset_res = self.onset_detector.detect(clean_audio, sr=self.sr)
 
         # 3. Post-process pitch & segment notes
-        report("Segmenting notes...", 0.55)
+        report("Smoothing & vibrato suppression...", 0.52)
         smoothed_f0 = smooth_pitch_track(pitch_track.frequencies_hz)
+        smoothed_f0 = suppress_vibrato(
+            smoothed_f0,
+            hop_length=self.pitch_detector.hop_length,
+            sr=self.sr,
+        )
         smoothed_f0 = correct_octave_errors(smoothed_f0)
 
+        report("Segmenting & merging notes...", 0.58)
         raw_segments = segment_notes(
             times=pitch_track.times,
             pitch_hz=smoothed_f0,
             voiced_flags=pitch_track.voiced_flags,
             onset_times=onset_res.onset_times,
+            merge_gap_sec=0.15,
+            merge_pitch_ratio=1.06,
         )
 
         # Build Note objects
@@ -121,6 +138,8 @@ class GamelanizerPipeline:
         report("Mapping to Gamelan scale...", 0.75)
         mapped_notes = self.mapper.map_notes(notes)
         styled_notes = self.performance.apply(mapped_notes)
+        if self.mapper.applied_transposition != 0.0:
+            report(f"Applied Key Transposition: {self.mapper.applied_transposition:+.1f} semitones", 0.8)
 
         # 6. Build Score
         track = Track(name=self.instrument.name, instrument=self.instrument.name, notes=styled_notes)
@@ -138,4 +157,5 @@ class GamelanizerPipeline:
             mapped_notes=styled_notes,
             score=score,
             summary=summary,
+            transposition_applied=self.mapper.applied_transposition,
         )

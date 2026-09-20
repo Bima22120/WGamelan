@@ -15,6 +15,8 @@ class EngineControls:
     irama_level: int = 1
     sample_rate: int = 22050
     export_midi: bool = True
+    auto_key: bool = True
+    transpose: float = 0.0
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)

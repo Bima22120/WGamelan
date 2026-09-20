@@ -66,6 +66,29 @@ class TestGamelan(unittest.TestCase):
         self.assertGreater(np.max(np.abs(audio)), 0.01)
         self.assertLessEqual(np.max(np.abs(audio)), 1.0)
 
+    def test_optimal_transposition(self):
+        from app.gamelan.mapping import find_optimal_transposition
+        scale = GamelanScale(scale_type="slendro")
+
+        # Let's create notes intentionally shifted by +2 semitones from Slendro tones:
+        # e.g. 270 * 2^(2/12) and 310 * 2^(2/12)
+        shift_expected = -2.0
+        n1 = Note(start_time=0.0, duration=1.0, pitch_hz=270.0 * (2.0 ** (2.0 / 12.0)))
+        n2 = Note(start_time=1.0, duration=1.0, pitch_hz=310.0 * (2.0 ** (2.0 / 12.0)))
+
+        best_shift, min_err = find_optimal_transposition([n1, n2], scale)
+        self.assertEqual(best_shift, shift_expected)
+        self.assertLess(min_err, 15.0)  # Error should be near zero after shifting -2 st
+
+    def test_pitch_mapper_auto_key(self):
+        scale = GamelanScale(scale_type="slendro")
+        mapper = PitchMapper(scale=scale, auto_align_key=True)
+
+        n = Note(start_time=0.0, duration=1.0, pitch_hz=270.0 * (2.0 ** (2.0 / 12.0)))
+        mapped = mapper.map_notes([n])
+        self.assertEqual(mapper.applied_transposition, -2.0)
+        self.assertEqual(mapped[0].gamelan_note, "1")
+
 
 if __name__ == "__main__":
     unittest.main()

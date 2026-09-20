@@ -5,7 +5,13 @@ import numpy as np
 
 from app.pitch.pyin_detector import PYINDetector
 from app.pitch.onset import OnsetDetector
-from app.pitch.postprocess import smooth_pitch_track, correct_octave_errors, segment_notes
+from app.pitch.postprocess import (
+    smooth_pitch_track,
+    suppress_vibrato,
+    correct_octave_errors,
+    merge_adjacent_notes,
+    segment_notes,
+)
 
 
 class TestPitch(unittest.TestCase):
@@ -56,6 +62,70 @@ class TestPitch(unittest.TestCase):
         notes = segment_notes(times, pitch_hz, voiced, onsets, min_duration=0.1)
         self.assertGreaterEqual(len(notes), 1)
         self.assertTrue(np.isclose(notes[0][2], 310.0, atol=5.0))
+
+    def test_suppress_vibrato(self):
+        """Vibrato-like signal (440 Hz ± 5% oscillation) should converge to stable pitch."""
+        sr = 22050
+        hop = 256
+        n_frames = 100
+        frame_rate = sr / hop
+
+        # Simulate pitch track with 6 Hz vibrato: 440 * (1 + 0.04 * sin(2pi * 6 * t))
+        t = np.arange(n_frames) / frame_rate
+        vibrato_pitch = (440.0 * (1.0 + 0.04 * np.sin(2 * np.pi * 6.0 * t))).astype(np.float32)
+
+        smoothed = suppress_vibrato(vibrato_pitch, hop_length=hop, sr=sr)
+
+        # After suppression, std deviation should be much smaller
+        original_std = np.std(vibrato_pitch)
+        smoothed_std = np.std(smoothed)
+        self.assertLess(smoothed_std, original_std * 0.5)
+
+        # Mean should remain close to 440 Hz
+        self.assertTrue(np.isclose(np.mean(smoothed), 440.0, atol=15.0))
+
+    def test_merge_adjacent_notes(self):
+        """Fragments of same pitch separated by short gaps should be merged."""
+        # Same pitch 310 Hz, 50ms gap — should be merged
+        notes_same = [
+            (0.0, 0.3, 310.0),
+            (0.35, 0.3, 313.0),   # ~17 cents diff, within 1.06 ratio
+        ]
+        merged = merge_adjacent_notes(notes_same, max_gap_sec=0.1, max_pitch_ratio=1.06)
+        self.assertEqual(len(merged), 1)
+        self.assertAlmostEqual(merged[0][0], 0.0)
+        self.assertAlmostEqual(merged[0][1], 0.65, places=2)
+
+        # Different pitches should NOT be merged
+        notes_diff = [
+            (0.0, 0.3, 270.0),
+            (0.32, 0.3, 410.0),   # 2 major semitones apart, should not merge
+        ]
+        not_merged = merge_adjacent_notes(notes_diff, max_gap_sec=0.1, max_pitch_ratio=1.06)
+        self.assertEqual(len(not_merged), 2)
+
+    def test_segment_notes_with_merge(self):
+        """Segmentation with merge enabled should reduce choppy fragments."""
+        sr = 22050
+        # 1.0s of voiced 310 Hz with a tiny 0.1s unvoiced gap in the middle
+        n_total = 100
+        times = np.linspace(0, 1.5, n_total)
+        pitch_hz = np.full(n_total, 310.0, dtype=np.float32)
+        voiced = np.ones(n_total, dtype=bool)
+        # Introduce a small silence gap around frame 40
+        voiced[38:45] = False
+        pitch_hz[38:45] = 0.0
+
+        notes_merged = segment_notes(
+            times, pitch_hz, voiced, np.array([]), min_duration=0.05,
+            merge_gap_sec=0.15, merge_pitch_ratio=1.06
+        )
+        notes_no_merge = segment_notes(
+            times, pitch_hz, voiced, np.array([]), min_duration=0.05,
+            merge_gap_sec=0.0
+        )
+        # Merged version should have fewer notes than un-merged version
+        self.assertLessEqual(len(notes_merged), len(notes_no_merge))
 
 
 if __name__ == "__main__":
