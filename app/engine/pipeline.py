@@ -19,6 +19,7 @@ from app.gamelan.instrument import get_instrument, GamelanInstrument
 from app.gamelan.mapping import PitchMapper
 from app.gamelan.performance import PerformanceStyle
 from app.gamelan.renderer import GamelanRenderer
+from app.gamelan.gong_layer import GongPunctuationLayer
 
 
 @dataclass
@@ -30,6 +31,11 @@ class PipelineResult:
     score: Score
     summary: AudioSummary
     transposition_applied: float = 0.0
+    gong_notes: List[Note] = None
+
+    def __post_init__(self):
+        if self.gong_notes is None:
+            self.gong_notes = []
 
 
 class GamelanizerPipeline:
@@ -45,6 +51,10 @@ class GamelanizerPipeline:
         bpm: float = 120.0,
         auto_key: bool = True,
         transpose: float = 0.0,
+        legato: bool = True,
+        reverb: bool = True,
+        add_gong: bool = True,
+        stereo: bool = True,
     ):
         self.sr = sample_rate
         self.scale = GamelanScale(scale_type=scale_name, pathet=pathet)
@@ -53,6 +63,10 @@ class GamelanizerPipeline:
         self.bpm = bpm
         self.auto_key = auto_key
         self.transpose = transpose
+        self.legato = legato
+        self.reverb = reverb
+        self.add_gong = add_gong
+        self.stereo = stereo
 
         # Subsystems
         self.analyzer = AudioAnalyzer(sample_rate=self.sr)
@@ -66,7 +80,14 @@ class GamelanizerPipeline:
             transposition_semitones=self.transpose,
         )
         self.performance = PerformanceStyle(irama_level=1, apply_damping=self.instrument.damping_enabled)
-        self.renderer = GamelanRenderer(instrument=self.instrument, sr=self.sr)
+        self.renderer = GamelanRenderer(
+            instrument=self.instrument,
+            sr=self.sr,
+            legato=self.legato,
+            reverb=self.reverb,
+            stereo=self.stereo,
+        )
+        self.gong_layer = GongPunctuationLayer(scale=self.scale, bpm=self.bpm)
 
     def process(
         self,
@@ -141,13 +162,30 @@ class GamelanizerPipeline:
         if self.mapper.applied_transposition != 0.0:
             report(f"Applied Key Transposition: {self.mapper.applied_transposition:+.1f} semitones", 0.8)
 
-        # 6. Build Score
-        track = Track(name=self.instrument.name, instrument=self.instrument.name, notes=styled_notes)
-        score = Score(tracks=[track], tempo_bpm=self.bpm)
+        # 6. Colotomic Gong Punctuation Layer (Solusi 4)
+        gong_notes: List[Note] = []
+        if self.add_gong and styled_notes:
+            report("Generating Gong & Kenong layer...", 0.82)
+            self.gong_layer.bpm = self.bpm
+            gong_notes = self.gong_layer.generate(styled_notes)
 
-        # 7. Render Audio
-        report("Synthesizing Gamelan audio...", 0.9)
-        rendered_audio = self.renderer.render(styled_notes)
+        # 7. Build Score (Solusi 4: Lead + Gong Tracks)
+        lead_track = Track(name=self.instrument.name, instrument=self.instrument.name, notes=styled_notes)
+        tracks = [lead_track]
+        if gong_notes:
+            gong_track = Track(name="Gong Ageng & Kenong", instrument="gong", notes=gong_notes)
+            tracks.append(gong_track)
+        score = Score(tracks=tracks, tempo_bpm=self.bpm)
+
+        # 8. Render Audio (Solusi 3 & 4: Legato Ringing + Acoustic Pendopo Reverb)
+        report("Synthesizing Gamelan audio (Legato + Pendopo Reverb)...", 0.90)
+        all_notes = styled_notes + gong_notes
+        rendered_audio = self.renderer.render(
+            all_notes,
+            legato=self.legato,
+            reverb=self.reverb,
+            stereo=self.stereo,
+        )
 
         report("Complete!", 1.0)
         return PipelineResult(
@@ -155,6 +193,7 @@ class GamelanizerPipeline:
             sample_rate=self.sr,
             detected_notes=notes,
             mapped_notes=styled_notes,
+            gong_notes=gong_notes,
             score=score,
             summary=summary,
             transposition_applied=self.mapper.applied_transposition,

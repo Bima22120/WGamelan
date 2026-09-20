@@ -31,6 +31,13 @@ class EngineRenderer:
         # Soft clip limiter
         data = np.tanh(data)
 
+        if data.ndim == 2:
+            if channels == "mono":
+                data = np.mean(data, axis=1)
+                return save_audio(output_filepath, data, sr=self.sample_rate)
+            # Already stereo
+            return save_audio(output_filepath, data, sr=self.sample_rate)
+
         if channels == "stereo":
             # Pan between -1.0 (left) and +1.0 (right)
             pan_clamped = max(-1.0, min(1.0, pan))

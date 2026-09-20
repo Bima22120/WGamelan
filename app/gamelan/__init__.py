@@ -9,6 +9,8 @@ from app.gamelan.sampler import GamelanSampler
 from app.gamelan.sample_manager import SampleManager
 from app.gamelan.envelope import GamelanEnvelope
 from app.gamelan.renderer import GamelanRenderer
+from app.gamelan.reverb import PendopoReverb
+from app.gamelan.gong_layer import GongPunctuationLayer
 
 __all__ = [
     "GamelanPitch",
@@ -26,4 +28,6 @@ __all__ = [
     "SampleManager",
     "GamelanEnvelope",
     "GamelanRenderer",
+    "PendopoReverb",
+    "GongPunctuationLayer",
 ]

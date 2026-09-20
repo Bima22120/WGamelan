@@ -19,6 +19,10 @@ class OfflineProcessor:
         quantize: bool = True,
         auto_key: bool = True,
         transpose: float = 0.0,
+        legato: bool = True,
+        reverb: bool = True,
+        add_gong: bool = True,
+        stereo: bool = True,
     ):
         self.pipeline = GamelanizerPipeline(
             scale_name=scale_name,
@@ -28,6 +32,10 @@ class OfflineProcessor:
             quantize=quantize,
             auto_key=auto_key,
             transpose=transpose,
+            legato=legato,
+            reverb=reverb,
+            add_gong=add_gong,
+            stereo=stereo,
         )
         self.engine_renderer = EngineRenderer(sample_rate=sample_rate)
 

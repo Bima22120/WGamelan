@@ -65,6 +65,10 @@ class MainWindow:
             quantize=self.controls.quantize,
             auto_key=self.controls.auto_key,
             transpose=self.controls.transpose,
+            legato=self.controls.legato,
+            reverb=self.controls.reverb,
+            add_gong=self.controls.add_gong,
+            stereo=self.controls.stereo,
         )
 
         try:

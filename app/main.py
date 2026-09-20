@@ -47,6 +47,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--transpose", type=float, default=0.0, help="Manual transposition shift in semitones (e.g. -2, 1)")
     parser.add_argument("--auto-key", action="store_true", default=True, help="Automatically align song key with Gamelan scale")
     parser.add_argument("--no-auto-key", dest="auto_key", action="store_false", help="Disable auto-key alignment")
+    parser.add_argument("--legato", action="store_true", default=True, help="Enable natural ringing decay and note overlap")
+    parser.add_argument("--no-legato", dest="legato", action="store_false", help="Disable legato mode")
+    parser.add_argument("--reverb", action="store_true", default=True, help="Apply acoustic Pendopo reverb ambiance")
+    parser.add_argument("--no-reverb", dest="reverb", action="store_false", help="Disable Pendopo reverb")
+    parser.add_argument("--gong", action="store_true", default=True, help="Generate automatic Gong Ageng & Kenong punctuation layer")
+    parser.add_argument("--no-gong", dest="gong", action="store_false", help="Disable Gong accompaniment layer")
+    parser.add_argument("--stereo", action="store_true", default=True, help="Render in immersive stereo width")
+    parser.add_argument("--mono", dest="stereo", action="store_false", help="Render in mono")
     parser.add_argument("--interactive", action="store_true", help="Launch interactive terminal wizard")
     return parser.parse_args()
 
@@ -62,6 +70,10 @@ def main() -> None:
             quantize=args.quantize,
             auto_key=args.auto_key,
             transpose=args.transpose,
+            legato=args.legato,
+            reverb=args.reverb,
+            add_gong=args.gong,
+            stereo=args.stereo,
         )
         window = MainWindow(controls=ctrls)
         window.run_cli_interactive()
@@ -90,6 +102,8 @@ def main() -> None:
     if args.transpose != 0.0:
         key_mode += f" [Manual Shift: {args.transpose:+.1f} st]"
     print(f"Key Mode    : {key_mode}")
+    print(f"Acoustics   : {'Legato Ringing' if args.legato else 'Damped'} | {'Pendopo Reverb (ON)' if args.reverb else 'Reverb (OFF)'} | {'Stereo' if args.stereo else 'Mono'}")
+    print(f"Gong Layer  : {'Gong Ageng & Kenong (ON)' if args.gong else 'OFF'}")
     print(f"Output WAV  : {output_wav}")
     if args.midi:
         print(f"Output MIDI : {args.midi}")
@@ -103,6 +117,10 @@ def main() -> None:
         quantize=args.quantize,
         auto_key=args.auto_key,
         transpose=args.transpose,
+        legato=args.legato,
+        reverb=args.reverb,
+        add_gong=args.gong,
+        stereo=args.stereo,
     )
 
     try:
@@ -119,6 +137,8 @@ def main() -> None:
         print(f"Total Notes Transcribed : {len(result.detected_notes)}")
         if result.transposition_applied != 0.0:
             print(f"Harmonic Transposition  : {result.transposition_applied:+.1f} semitones")
+        if result.gong_notes:
+            print(f"Gong Punctuation Layer  : {len(result.gong_notes)} structural strokes (Gong Ageng & Kenong)")
         print(f"Rendered Audio File     : {os.path.abspath(output_wav)}")
 
         AsciiVisualizer.print_note_table(result.mapped_notes, max_notes=12)

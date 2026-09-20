@@ -17,6 +17,10 @@ class EngineControls:
     export_midi: bool = True
     auto_key: bool = True
     transpose: float = 0.0
+    legato: bool = True
+    reverb: bool = True
+    add_gong: bool = True
+    stereo: bool = True
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
