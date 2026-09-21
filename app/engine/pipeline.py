@@ -194,14 +194,16 @@ class GamelanizerPipeline:
             tracks.append(gong_track)
         score = Score(tracks=tracks, tempo_bpm=self.bpm)
 
-        # 9. Render Audio (Physical Modeling + Legato + Pendopo Reverb)
+        # 9. Render Audio (Physical Modeling + Legato + Pendopo Reverb + Acoustic Mastering)
         report("Synthesizing Full Gamelan Ensemble (Physical Modeling + Reverb)...", 0.90)
         all_notes = styled_notes + bonang_notes + gong_notes
+        input_dur = len(clean_audio) / self.sr
         rendered_audio = self.renderer.render(
             all_notes,
             legato=self.legato,
             reverb=self.reverb,
             stereo=self.stereo,
+            target_duration_sec=input_dur,
         )
 
         report("Complete!", 1.0)

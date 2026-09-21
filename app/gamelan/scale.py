@@ -1,4 +1,4 @@
-"""Gamelan scale definitions: Laras Slendro, Laras Pelog, and Pathet modes."""
+"""Gamelan scale definitions: Laras Slendro, Laras Pelog, and Diatonic Hybrid modes."""
 
 from typing import List, Optional
 from app.gamelan.tuning import GamelanPitch, build_tuning_table
@@ -13,6 +13,10 @@ PATHET_NOTES = {
     "pelog_nem": ["2", "3", "5", "6", "1"],
     "pelog_barang": ["2", "3", "5", "6", "7"],
     "pelog_full": ["1", "2", "3", "4", "5", "6", "7"],
+    # Diatonic modes
+    "diatonic_major": ["1", "2", "3", "4", "5", "6", "7"],
+    "diatonic_minor": ["1", "2", "2#", "4", "5", "5#", "6#"],
+    "diatonic_chromatic": ["1", "1#", "2", "2#", "3", "4", "4#", "5", "5#", "6", "6#", "7"],
 }
 
 
@@ -22,7 +26,10 @@ class GamelanScale:
     def __init__(self, scale_type: str = "slendro", pathet: Optional[str] = None):
         self.scale_type = scale_type.lower()
         self.pathet = pathet.lower() if pathet else None
-        self._pitches: List[GamelanPitch] = build_tuning_table(self.scale_type, octaves=[-1, 0, 1])
+        
+        # Use wider octave register for Diatonic to cover guitar range (-2 to +2)
+        octaves = [-2, -1, 0, 1, 2] if "diatonic" in self.scale_type else [-1, 0, 1]
+        self._pitches: List[GamelanPitch] = build_tuning_table(self.scale_type, octaves=octaves)
 
         # Filter by pathet if specified
         if self.pathet and self.pathet in PATHET_NOTES:
@@ -42,3 +49,4 @@ class GamelanScale:
     def __repr__(self) -> str:
         mode_str = f" ({self.pathet})" if self.pathet else ""
         return f"GamelanScale({self.scale_type.capitalize()}{mode_str}, {len(self._pitches)} tones)"
+

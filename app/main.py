@@ -25,9 +25,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "-s", "--scale",
         type=str,
-        choices=["slendro", "pelog"],
+        choices=["slendro", "pelog", "diatonic"],
         default="slendro",
-        help="Target Gamelan tuning system",
+        help="Target Gamelan tuning system (slendro, pelog, or diatonic 12-TET hybrid)",
     )
     parser.add_argument(
         "--pathet",

@@ -28,7 +28,10 @@ class PerformanceStyle:
                 next_note = notes[i + 1]
                 gap = next_note.start_time - curr.start_time
                 if self.apply_damping and gap > 0:
-                    # Saron player dampens right when the next note is struck
+                    # Saron player dampens right when the next note is struck.
+                    # We keep the original detected duration in metadata so the
+                    # renderer (Solusi 2) can use it for duration scaling; the
+                    # effective_dur here is used only as a hint for the Score.
                     effective_dur = min(curr.duration, gap + 0.05)
                 else:
                     effective_dur = curr.duration
@@ -38,6 +41,8 @@ class PerformanceStyle:
             metadata = dict(curr.metadata)
             metadata["irama_level"] = self.irama_level
             metadata["damped"] = self.apply_damping
+            # Preserve original detected duration for renderer duration scaling (Solusi 2)
+            metadata["original_duration"] = curr.duration
 
             styled.append(
                 Note(
@@ -53,3 +58,4 @@ class PerformanceStyle:
             )
 
         return styled
+

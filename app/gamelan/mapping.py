@@ -38,8 +38,13 @@ def find_optimal_transposition(
     if total_weight <= 0:
         return 0.0, 0.0
 
+    # For full 12-TET chromatic diatonic scale, preserve exact original pitch/key
+    if "diatonic" in scale.scale_type and (not scale.pathet or "chromatic" in scale.pathet):
+        return 0.0, 0.0
+
     best_shift = 0.0
     best_error = float("inf")
+
 
     # Search through semitone offsets [-6, +6]
     for semitone_shift in range(-search_range_semitones, search_range_semitones + 1):

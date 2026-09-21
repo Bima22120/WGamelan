@@ -7,7 +7,7 @@ from typing import Literal, Dict, Any
 @dataclass
 class EngineControls:
     """Settings controller for the Gamelanizer engine."""
-    scale: Literal["slendro", "pelog"] = "slendro"
+    scale: Literal["slendro", "pelog", "diatonic"] = "slendro"
     pathet: str = ""
     instrument: Literal["saron", "demung", "peking", "bonang", "gong"] = "saron"
     quantize: bool = True
