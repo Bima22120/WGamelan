@@ -58,6 +58,30 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--stereo", action="store_true", default=True, help="Render in immersive stereo width")
     parser.add_argument("--mono", dest="stereo", action="store_false", help="Render in mono")
     parser.add_argument("--interactive", action="store_true", help="Launch interactive terminal wizard")
+    # Reference-Based Orchestration Transfer
+    parser.add_argument(
+        "--reference",
+        type=str,
+        default=None,
+        metavar="PATH",
+        help="Path to reference gamelan audio. If provided, the system learns the orchestration "
+             "behavior from this file and transfers it to the source song (Reference-Based mode). "
+             "Overrides rule-based gong + bonang layers.",
+    )
+    parser.add_argument(
+        "--reference-profile",
+        type=str,
+        default=None,
+        metavar="PATH",
+        help="Path to a pre-learned OrchestrationProfile JSON file. Skips learning step.",
+    )
+    parser.add_argument(
+        "--learn-orchestration",
+        action="store_true",
+        default=False,
+        help="Learn and save orchestration profile from --reference audio, then exit "
+             "(without converting any source song).",
+    )
     return parser.parse_args()
 
 
@@ -106,6 +130,12 @@ def main() -> None:
         key_mode += f" [Manual Shift: {args.transpose:+.1f} st]"
     print(f"Key Mode    : {key_mode}")
     print(f"Acoustics   : {'Physical Modeling + Legato' if args.legato else 'Physical Modeling (Damped)'} | {'Pendopo Reverb (ON)' if args.reverb else 'Reverb (OFF)'} | {'Stereo' if args.stereo else 'Mono'}")
+    orch_mode_label = "Rule-Based (Gong + Bonang layers)"
+    if hasattr(args, 'reference') and args.reference:
+        orch_mode_label = f"Reference-Based: {args.reference}"
+    elif hasattr(args, 'reference_profile') and args.reference_profile:
+        orch_mode_label = f"Reference-Based (profile): {args.reference_profile}"
+    print(f"Orchestration: {orch_mode_label}")
     print(f"Ensemble    : Bonang Layer: {'ON' if args.bonang else 'OFF'} | Gong Ageng: {'ON' if args.gong else 'OFF'}")
     print(f"Output WAV  : {output_wav}")
     if args.midi:
@@ -113,6 +143,51 @@ def main() -> None:
     print("-" * 65)
 
     pbar = ProgressBar(description="Converting")
+
+    # --- Resolve reference-based orchestration ---
+    reference_audio_arr = None
+    reference_name = "reference_gamelan"
+    pre_loaded_profile = None
+
+    if hasattr(args, 'reference_profile') and args.reference_profile:
+        # Load pre-computed profile JSON
+        try:
+            from app.orchestration.orchestration_profile import OrchestrationProfile
+            pre_loaded_profile = OrchestrationProfile.load(args.reference_profile)
+            print(f"[Orchestration] Loaded pre-computed profile: {args.reference_profile}")
+        except Exception as e:
+            print(f"[Warning] Could not load reference profile: {e}")
+
+    if hasattr(args, 'reference') and args.reference and args.reference != args.input:
+        if os.path.exists(args.reference):
+            from app.audio.loader import load_audio
+            ref_audio, ref_sr = load_audio(args.reference, target_sr=22050)
+            reference_audio_arr = ref_audio
+            reference_name = os.path.splitext(os.path.basename(args.reference))[0]
+            print(f"[Orchestration] Reference audio loaded: {args.reference} ({len(ref_audio)/22050:.1f}s)")
+        else:
+            print(f"[Warning] Reference audio not found: {args.reference}")
+
+    # --learn-orchestration only mode: fit and save, then exit
+    if hasattr(args, 'learn_orchestration') and args.learn_orchestration:
+        if reference_audio_arr is None:
+            print("[Error] --learn-orchestration requires --reference <audio_file>")
+            sys.exit(1)
+        from app.orchestration.learner import OrchestrationLearner
+        learner = OrchestrationLearner(profile_dir="data/orchestration_profiles")
+        profile = learner.fit(
+            reference_audio=reference_audio_arr,
+            sr=22050,
+            name=reference_name,
+            laras=args.scale,
+            auto_save=True,
+        )
+        save_path = os.path.join("data", "orchestration_profiles", f"{reference_name}.json")
+        print(f"[Orchestration] Profile learned and saved to: {save_path}")
+        print(f"  Instruments detected: {list(profile.density_model.keys())}")
+        print(f"  Tempo: {profile.metadata.get('reference_tempo_bpm', '?')} BPM")
+        return
+
     processor = OfflineProcessor(
         scale_name=args.scale,
         pathet=args.pathet,
@@ -125,6 +200,7 @@ def main() -> None:
         add_gong=args.gong,
         add_bonang=args.bonang,
         stereo=args.stereo,
+        orchestration_profile=pre_loaded_profile,
     )
 
     try:
@@ -133,11 +209,14 @@ def main() -> None:
             output_wav_path=output_wav,
             output_midi_path=args.midi,
             progress_cb=pbar.update,
+            reference_audio=reference_audio_arr,
+            reference_name=reference_name,
         )
 
         print("\n" + "=" * 65)
         print("CONVERSION SUCCESSFUL!")
         print("=" * 65)
+        print(f"Orchestration Mode           : {result.orchestration_mode.replace('_', '-').title()}")
         print(f"Total Lead Notes Transcribed : {len(result.detected_notes)}")
         if result.transposition_applied != 0.0:
             print(f"Harmonic Transposition       : {result.transposition_applied:+.1f} semitones")
@@ -145,7 +224,25 @@ def main() -> None:
             print(f"Bonang Chime Ensemble Layer  : {len(result.bonang_notes)} interlocking notes")
         if result.gong_notes:
             print(f"Gong Punctuation Layer       : {len(result.gong_notes)} structural strokes (Gong & Kenong)")
+        if result.gamelan_score:
+            gs = result.gamelan_score
+            print(f"GamelanScore Tracks          : {', '.join(gs.instrument_names)} ({gs.total_notes} total notes)")
         print(f"Rendered Audio File          : {os.path.abspath(output_wav)}")
+
+        if result.fidelity_metrics:
+            m = result.fidelity_metrics
+            print("\n" + "-" * 65)
+            print("                 FIDELITY ENGINE EVALUATION REPORT               ")
+            print("-" * 65)
+            print(f"Mean Timing Alignment Error  : {m.e_timing_ms:.2f} ms")
+            print(f"Mean Onset Deviation         : {m.e_onset_ms:.2f} ms")
+            print(f"Pitch Accuracy Deviation     : {m.e_pitch_cents:.1f} cents")
+            print(f"Interval Step Distortion     : {m.e_interval_cents:.1f} cents")
+            print(f"Melodic Contour Match        : {(1.0 - m.e_melody) * 100:.1f}%")
+            print(f"Mean Duration Error          : {m.e_duration_pct:.1f}%")
+            print(f"Normalized DTW Distance      : {m.dtw_distance:.4f}")
+            print(f"TOTAL MUSICAL ERROR (E_total): {m.e_total:.4f}")
+            print("-" * 65)
 
         AsciiVisualizer.print_note_table(result.mapped_notes, max_notes=12)
         AsciiVisualizer.print_piano_roll(result.mapped_notes)
@@ -153,6 +250,7 @@ def main() -> None:
     except Exception as e:
         print(f"\n[Error executing pipeline] {e}")
         sys.exit(1)
+
 
 
 if __name__ == "__main__":

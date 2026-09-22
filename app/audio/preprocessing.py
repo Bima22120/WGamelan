@@ -72,3 +72,71 @@ def preprocess_audio(audio: np.ndarray, sr: int, target_peak: float = 0.95, high
     filtered = highpass_filter(audio, sr, cutoff_hz=highpass_cutoff)
     normalized = normalize_peak(filtered, target_peak=target_peak)
     return np.ascontiguousarray(normalized, dtype=np.float32)
+
+
+def separate_hpss(audio: np.ndarray, sr: int, margin: float = 1.0) -> Tuple[np.ndarray, np.ndarray]:
+    """Separate audio signal into Harmonic and Percussive components (HPSS).
+
+    Harmonic component isolates sustained guitar notes, overdrive, feedback, hum, and delay tails.
+    Percussive component isolates transient pick strikes and percussive attacks.
+
+    Args:
+        audio: 1D float32 audio numpy array.
+        sr: Sample rate.
+        margin: Separation margin coefficient.
+
+    Returns:
+        (harmonic_audio, percussive_audio)
+    """
+    if len(audio) == 0:
+        return audio.copy(), audio.copy()
+
+    try:
+        import librosa
+        h, p = librosa.effects.hpss(y=audio, margin=margin)
+        return h.astype(np.float32), p.astype(np.float32)
+    except Exception:
+        pass
+
+    # NumPy / SciPy STFT fallback for HPSS
+    if signal is None:
+        return audio.copy(), audio.copy()
+
+    try:
+        from scipy import ndimage
+        nperseg = 1024
+        noverlap = 768
+        f, t, Zxx = signal.stft(audio, fs=sr, nperseg=nperseg, noverlap=noverlap)
+        S = np.abs(Zxx)
+
+        # Median filter along time (harmonic) and frequency (percussive)
+        H_mag = ndimage.median_filter(S, size=(1, 15)) if ndimage else S
+        P_mag = ndimage.median_filter(S, size=(15, 1)) if ndimage else S
+
+        eps = 1e-6
+        H_power = H_mag ** 2
+        P_power = P_mag ** 2
+        total_power = H_power + P_power + eps
+
+        mask_h = H_power / total_power
+        mask_p = P_power / total_power
+
+        Zh = Zxx * mask_h
+        Zp = Zxx * mask_p
+
+        _, harmonic_audio = signal.istft(Zh, fs=sr, nperseg=nperseg, noverlap=noverlap)
+        _, percussive_audio = signal.istft(Zp, fs=sr, nperseg=nperseg, noverlap=noverlap)
+
+        # Truncate / pad to match original audio length
+        min_len_h = min(len(audio), len(harmonic_audio))
+        min_len_p = min(len(audio), len(percussive_audio))
+
+        h_out = np.zeros_like(audio)
+        p_out = np.zeros_like(audio)
+        h_out[:min_len_h] = harmonic_audio[:min_len_h]
+        p_out[:min_len_p] = percussive_audio[:min_len_p]
+
+        return h_out.astype(np.float32), p_out.astype(np.float32)
+    except Exception:
+        return audio.copy(), audio.copy()
+

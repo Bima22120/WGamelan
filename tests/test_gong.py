@@ -13,14 +13,18 @@ class TestGongLayer(unittest.TestCase):
         self.gong_layer = GongPunctuationLayer(scale=self.scale, bpm=120.0, add_kenong=True, gongan_beats=16)
 
     def test_gong_frequency_range(self):
-        freq = self.gong_layer._get_gong_freq()
+        root = self.gong_layer._get_default_root_freq()
+        freq = self.gong_layer._to_gong_register(root)
         # Large gong should resonate in deep bass / sub-bass range (45 to 85 Hz)
         self.assertGreaterEqual(freq, 45.0)
         self.assertLessEqual(freq, 85.0)
 
     def test_kenong_frequency(self):
-        gong_freq = self.gong_layer._get_gong_freq()
-        kenong_freq = self.gong_layer._get_kenong_freq()
+        root = self.gong_layer._get_default_root_freq()
+        gong_freq = self.gong_layer._to_gong_register(root)
+        kenong_freq = self.gong_layer._to_kenong_register(root)
+        self.assertGreaterEqual(kenong_freq, 95.0)
+        self.assertLessEqual(kenong_freq, 180.0)
         self.assertAlmostEqual(kenong_freq, gong_freq * 2.0)
 
     def test_generate_cadence_gong(self):
